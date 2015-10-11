@@ -1,57 +1,54 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
  
-void error(const char *msg)
+int main (int argc,char *argv[])
 {
-	perror(msg);
-	exit(0);
-}
 
-int main(int argc, char *argv[])
-{
-	int sockfd, portno, n;
-	struct sockaddr_in serv_addr;
-	struct hostent *server;
-	
-	char buffer[256];
-	if (argc < 7) {
-		fprintf(stderr,"usage %s hostname port\n", argv[0]);
-		exit (0);
+	int sock;
+	struct sockaddr_in server;
+	char message[1000], server_reply[2000];
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	{
+		if (sock == -1)
+		 {
+			printf("Could not create socket");
+		    }
+		    puts("socket created");
+
+		server.sin_addr.s_addr = inet_addr("127.0.0.1");
+		server.sin_family = AF_INET;
+		server.sin_port = htons (8888);
+
+	if(connect(sock,(struct sockaddr *)&server, sizeof(server))<0)
+		{
+			perror("connect failed.Error");
+			return 1;
+		}
+		
+		puts("Connect\n");
+
+		while(1)
+		{
+			printf("Enter message: ");
+			scanf("%s", message);
+			if(send(sock, message, strlen(message),0)<0)
+			{
+				puts("send failed");
+				return 1;
+			}
+			if(recv(sock, server_reply, 2000, 0)<0)
+			{
+				puts("recv Failed");
+				break;
+			}
+			puts("Server reply:");
+			puts("server_reply");
+		}
+		close(sock);
+		return 0;
 	}
-	portno = atoi(argv[2]);
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd < 0)
-		error("ERROR opening socket");
-	server = gethostbyname(argv[1]);
-	if (server == NULL) {
-	     fprintf(stderr,"ERROR, no such host\n");
-		exit(0);
-	}
-	bzero((char *) &serv_addr, sizeof(serv_addr));
-	serv_addr.sin_family =  AF_INET;
-	bcopy((char *)server->h_addr,
-		(char *)&serv_addr.sin_addr.s_addr,
-		server->h_length);
-	serv_addr.sin_port = htons(1026);
-	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
-		error("ERROR connecting");
-	printf("Please enter the message: ");
-	bzero(buffer, 256);
-	fgets(buffer,255,stdin);
-	n = write(sockfd,buffer,strlen(buffer));
-	if (n < 0)
-		error("ERROR writing to socket");
-	bzero(buffer,256);
-	n = read(sockfd,buffer, 255);
-	if (n < 0)
-		error("ERROR reading from socket");
-	printf("%s\n",buffer);
-	close(sockfd);
-	return 0;
 }
