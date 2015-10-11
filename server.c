@@ -1,60 +1,60 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
+#include <sys/time.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 
-void error(const char *msg)
+int main (int argc, char *argv[])
 {
-	perror(msg);
-	exit(1);
-}
-
-int main(int argc, char *argv[])
-{
-	int sockfd, newsockfd, portno;
-	socklen_t clilen;
-	char buffer[256];
-	struct sockaddr_in serv_addr, cli_addr;
-	int n;
-	if (argc < 2) {
-		fprintf(stderr,"ERROR, no port provided\n");
-		exit(1);
+	int socket_fd,client_sock, c , read_size,value, len;
+        struct sockaddr_in server, client;
+        char client_message[2000];
+	
+	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (socket_fd == -1)
+	{
+		printf("Could not create socket");
 	}
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd < 0)
-		error("ERROR opening socket");
-	bzero((char *) &serv_addr, sizeof(serv_addr));
-	portno = atoi (argv[1]);
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	serv_addr.sin_port = htons(portno);
-	if (bind(sockfd, (struct sockaddr *) &serv_addr,
-		sizeof(serv_addr)) < 0)
-		error ("ERROR on binding");
-	listen(sockfd,5);
-	clilen = sizeof(cli_addr);
-	newsockfd = accept(sockfd,
-		 (struct sockaddr *) &cli_addr,
-		 &clilen);
-	if (newsockfd < 0)
-		error ("ERROR on accept");
-	bzero(buffer,256);
+	puts("Socket created");
 
-	/*
-	n = read(newsockfd,buffer,255);
-	if (n < 0)
-	 error ("ERROR reading from socket");
-	printf("Here is the message: %s\n",buffer);
-	n = write(newsockfd,"I got your message",18);
-	if (n < 0) error("ERROR writing to socket");
-	close(newsockfd);
-	*/
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = htonl(INADDR_ANY);
+	server.sin_port = htons(8888);
 
+	if(bind(socket_fd, (struct sockaddr*) &server, sizeof(server))<0)
+	{perror("bind failed. Error");
+		return 1;}
+	puts("bind done");
 
-	close(newsockfd);
-	close(sockfd);
+	listen(socket_fd,3);
+	
+	puts ("waiting for incoming connections..");
+	c = sizeof(struct sockaddr_in);
+
+	client_sock = accept (socket_fd,(struct sockaddr *) &client, (socklen_t*)&c);
+		if(client_sock<0)
+		{perror("accept failed");
+		return 1;
+		}
+		puts  ("connection accepted");
+	
+	getsockopt(socket_fd,SOL_SOCKET, SO_SNDBUF, &value, &len);
+	if(value == 0)
+		printf("Unable Get \n");
+	else
+		printf("Can Get %d\n",value);
+
+	value = 32768;
+	setsockopt (socket_fd,SOL_SOCKET, SO_SNDBUF, &value, sizeof(value));
+	printf("Set !! \n ");
+	
+	getsockopt(socket_fd,SOL_SOCKET, SO_SNDBUF, &value, &len);
+	if(value == 0)
+		printf("Unable Get NEW\n");
+	else
+		printf("Can Get NEW %d\n",value);
+	
 	return 0;
+
 }
